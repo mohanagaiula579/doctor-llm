@@ -45,6 +45,7 @@ export default function ChatPage() {
 
       const response = await fetch('https://health-assistant-482245532835.asia-south1.run.app/chat', {
         method: 'POST',
+         mode: 'cors', 
         headers: {
           'Content-Type': 'application/json',
         },
