@@ -43,13 +43,13 @@ export default function ChatPage() {
       const updatedHistory = [...conversationHistory, inputValue];
       setConversationHistory(updatedHistory);
 
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch('https://health-assistant-482245532835.asia-south1.run.app/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          "session_id": "u12345678",
+          "session_id": "u1234567891",
           "message": inputValue,
           "history": updatedHistory
         }),
