@@ -13,8 +13,18 @@ export default function ChatPage() {
   const [followUpQuestions, setFollowUpQuestions] = useState([]);
   const [specialty, setSpecialty] = useState(null);
   const [topDoctors, setTopDoctors] = useState(null);
+  const [radiusKm, setRadiusKm] = useState(20); // Default radius
+  const [city, setCity] = useState(''); // City input
+  const [sessionId, setSessionId] = useState(''); // Session ID
   const messagesEndRef = useRef(null);
   const [conversationHistory, setConversationHistory] = useState([]);
+
+  // Generate session ID when component mounts
+  useEffect(() => {
+    // Generate a unique session ID
+    const newSessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+    setSessionId(newSessionId);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -30,7 +40,8 @@ export default function ChatPage() {
 
     // Add user message
     const userMessage = { role: 'user', content: inputValue };
-    const updatedMessages = [...messages, userMessage];
+    const updatedMessages = [...messages, userMessage];   
+    
     setMessages(updatedMessages);
     setInputValue('');
     setIsLoading(true);
@@ -42,17 +53,18 @@ export default function ChatPage() {
       // Update conversation history
       const updatedHistory = [...conversationHistory, inputValue];
       setConversationHistory(updatedHistory);
-
-      const response = await fetch('https://health-assistant-482245532835.asia-south1.run.app/chat', {
+      
+      const response = await fetch('http://localhost:8080/chat', {
         method: 'POST',
-         mode: 'cors', 
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          "session_id": "u1234567891",
+          "session_id": sessionId,
           "message": inputValue,
-          "history": updatedHistory
+          "radius_km": radiusKm,
+          "city": city,
+          // "history": updatedHistory
         }),
       });
 
@@ -91,19 +103,55 @@ export default function ChatPage() {
   const handleQuickQuestion = (question) => {
     setInputValue(question);
   };
-  console.log(messages,"messages")
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100">
       <Head>
-        <title>AI Assistant</title>
+        <title>Health Assistant</title>
         <meta name="description" content="Chat with our AI assistant" />
       </Head>
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <header className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-indigo-800 mb-2">AI Assistant</h1>
-          <p className="text-indigo-600">Ask me anything and I'll do my best to help</p>
+          <h1 className="text-4xl font-bold text-indigo-800 mb-2">Health Assistant</h1>
+          <p className="text-indigo-600">Ask me anything about your health</p>
         </header>
+
+        {/* Location and radius inputs */}
+        <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+                City
+              </label>
+              <input
+                type="text"
+                id="city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Enter your city"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="radius" className="block text-sm font-medium text-gray-700 mb-1">
+                Search Radius (km)
+              </label>
+              <input
+                type="number"
+                id="radius"
+                value={radiusKm}
+                onChange={(e) => setRadiusKm(parseInt(e.target.value) || 20)}
+                min="1"
+                max="100"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Session ID: {sessionId}
+          </p>
+        </div>
 
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           {/* Chat messages */}
@@ -118,64 +166,59 @@ export default function ChatPage() {
                     ? 'bg-indigo-600 text-white rounded-br-none' 
                     : 'bg-gray-100 text-gray-800 rounded-bl-none'}`}
                 >
-                  {  typeof msg.content==="string" ? msg.content:
-               
-             <>{
-         
-            msg.content.specialty && (
-              <div className="mb-4 flex justify-start">
-                <div className="bg-blue-50 text-blue-800 rounded-lg px-4 py-2 max-w-md border border-blue-100">
-                  <div className="font-semibold">Recommended Specialty:</div>
-                  <div>{specialty}</div>
-                </div>
-              </div>
-            )}
+                  {typeof msg.content === "string" ? msg.content :
+                    <>
+                      {msg.content.specialty && !msg.content.need_followups && (
+                        <div className="mb-4 flex justify-start">
+                          <div className="bg-blue-50 text-blue-800 rounded-lg px-4 py-2 max-w-md border border-blue-100">
+                            <div className="font-semibold">Recommended Specialty:</div>
+                            <div>{specialty}</div>
+                          </div>
+                        </div>
+                      )}
 
-            {/* Top Doctors */}
-            {msg?.content?.top_doctors && msg?.content?.top_doctors?.length > 0 && (
-              <div className="mb-4 flex justify-start">
-                <div className="bg-green-50 text-green-800 rounded-lg px-4 py-2 max-w-md border border-green-100">
-                  <div className="font-semibold mb-2">Recommended Doctors:</div>
-                  <ul className="space-y-2">
-                    {msg?.content?.top_doctors?.map((doctor, index) => (
-                      <li key={index} className="border-b border-green-100 pb-2 last:border-0">
-                        <div className="font-medium">{doctor.name}</div>
-                        {/* {doctor.specialty && <div className="text-sm">Specialty: {doctor.specialty}</div>} */}
-                        {doctor.area && <div className="text-sm">Location: {doctor.area}</div>}
-                        {/* {doctor.experience && <div className="text-sm">Experience: {doctor.experience}</div>} */}
-                        {doctor.google_rating && <div className="text-sm">Rating: {doctor.google_rating}</div>}
-                        {doctor.total_reviews && <div className="text-sm">total reviews: {doctor.total_reviews}</div>}
-                        {doctor.why_recommended && <div className="text-sm"> summary: {doctor.why_recommended}</div>}
-                        {doctor.maps_url && <Link className='text-red-500' href={doctor.maps_url}>google Map Link</Link>}
-                        {/* Add more fields as needed */}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
+                      {/* Top Doctors */}
+                      {msg.content?.recommendations && msg.content?.recommendations?.length || msg.content.candidates.length > 0 && (
+                        <div className="mb-4 flex justify-start">
+                          <div className="bg-green-50 text-green-800 rounded-lg px-4 py-2 max-w-md border border-green-100">
+                            <div className="font-semibold mb-2">Recommended Doctors:</div>
+                            <ul className="space-y-2">
+                              {(msg.content?.recommendations.length ?msg.content?.recommendations: msg.content.candidates.slice(0,5)).map((doctor, index) => (
+                                <li key={index} className="border-b border-green-100 pb-2 last:border-0">
+                                  <div className="font-medium">{doctor.name}</div>
+                                  {(doctor["address"]|| doctor["area"]) && <div className="text-sm">Location: {doctor["address"]|| doctor["area"]}</div>}
+                                  {(doctor["rating"] || doctor["google_rating"]) && <div className="text-sm">Rating: {doctor["rating"] || doctor["google_rating"]}</div>}
+                                  {(doctor["reviews_count"] || doctor["total_reviews"]) && <div className="text-sm">Total reviews: { (doctor["reviews_count"] || doctor["total_reviews"])}</div>}
+                                  {doctor.why_recommended && <div className="text-sm">Summary: {doctor.why_recommended}</div>}
+                                  {doctor.maps_url && <Link className='text-red-500' href={doctor.maps_url}>Google Map Link</Link>}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      )}
 
-            {/* Follow-up questions */}
-            {msg.content?.followup_questions && msg.content?.followup_questions?.length > 0 && (
-              <div className="mb-4">
-                <div className="text-xs text-gray-500 mb-2">Follow-up questions: please answer these questions</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {msg.content?.followup_questions.map((question, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleQuickQuestion(question)}
-                      className="text-left bg-indigo-50 hover:bg-indigo-100 text-indigo-800 px-3 py-2 rounded-lg border border-indigo-100 transition-colors text-sm"
-                    >
-                      {question}
-                    </button>
-                  ))}
+                      {/* Follow-up questions */}
+                      {msg.content?.followup_questions && msg.content?.followup_questions?.length > 0 && (
+                        <div className="mb-4">
+                          <div className="text-xs text-gray-500 mb-2">Follow-up questions: please answer these questions</div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {msg.content?.followup_questions.map((question, index) => (
+                              <button
+                                key={index}
+                                onClick={() => handleQuickQuestion(question)}
+                                className="text-left bg-indigo-50 hover:bg-indigo-100 text-indigo-800 px-3 py-2 rounded-lg border border-indigo-100 transition-colors text-sm"
+                              >
+                                {question}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  }
                 </div>
               </div>
-            )}
-            </>
-}
-</div>
-</div>
             ))}
             {isLoading && (
               <div className="flex justify-start mb-4">
