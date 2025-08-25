@@ -54,7 +54,7 @@ export default function ChatPage() {
       const updatedHistory = [...conversationHistory, inputValue];
       setConversationHistory(updatedHistory);
       
-      const response = await fetch('http://localhost:8080/chat', {
+      const response = await fetch('https://health-assistant-482245532835.asia-south1.run.app/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,6 +99,8 @@ export default function ChatPage() {
       setIsLoading(false);
     }
   };
+
+  
 
   const handleQuickQuestion = (question) => {
     setInputValue(question);
@@ -178,7 +180,7 @@ export default function ChatPage() {
                       )}
 
                       {/* Top Doctors */}
-                      {msg.content?.recommendations && msg.content?.recommendations?.length || msg.content.candidates.length > 0 && (
+                      {(( msg.content?.recommendations?.length) || (msg.content?.candidates?.length) ) && (
                         <div className="mb-4 flex justify-start">
                           <div className="bg-green-50 text-green-800 rounded-lg px-4 py-2 max-w-md border border-green-100">
                             <div className="font-semibold mb-2">Recommended Doctors:</div>
